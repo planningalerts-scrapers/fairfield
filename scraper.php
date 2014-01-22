@@ -1,4 +1,5 @@
-<?php 
+<?php
+require 'scraperwiki.php'; 
 
 date_default_timezone_set('Australia/Sydney');
 require 'scraperwiki/simple_html_dom.php';
@@ -124,7 +125,7 @@ foreach($container->find("table") as $table)
 
     if($record['council_reference'] != '' && $record['description'] != '')
     {
-        $existingRecords = scraperwiki::select("* from swdata where `council_reference`='" . $record['council_reference'] . "'");
+        $existingRecords = scraperwiki::select("* from data where `council_reference`='" . $record['council_reference'] . "'");
         if (count($existingRecords) == 0)
         {
             print ("Saving record " . $record['council_reference'] . "\n");
