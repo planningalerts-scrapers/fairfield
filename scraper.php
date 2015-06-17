@@ -119,7 +119,7 @@ foreach($container->find("table") as $table)
         }
     }
 
-    $record['info_url'] = 'http://www.fairfieldcity.nsw.gov.au/default.asp?iNavCatId=7&iSubCatId=86';
+    $record['info_url'] = 'http://www.fairfieldcity.nsw.gov.au/default.asp?iNavCatID=54&iSubCatID=2240';
     $record['comment_url'] = 'http://www.fairfieldcity.nsw.gov.au/default.asp?iDocID=6779&iNavCatID=54&iSubCatID=2249';
     $record['date_scraped'] = date('Y-m-d');
 
