@@ -64,7 +64,7 @@ foreach($container->find("table") as $table)
           {
               print ("Saving record " . $record['council_reference'] . "\n");
               //print_r ($record);
-              scraperwiki::save($record['council_reference'], $record);
+              scraperwiki::save(array('council_reference'), $record);
           }
           else
           {
