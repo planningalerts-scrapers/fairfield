@@ -40,6 +40,8 @@ foreach($container->find("table") as $table)
       $record['description'] = $description;
 
       $dateFromString = trim(html_entity_decode($cell3->plaintext));
+      $dateFromString = preg_replace("/&#?[a-z0-9]{2,8};/i","",$dateFromString);
+      $dateFromString = str_replace("&nbsp;", '', $dateFromString);
       $dateFrom = date('Y-m-d', strtotime($dateFromString));
       if($dateFrom != '1970-01-01')
       {
@@ -47,6 +49,8 @@ foreach($container->find("table") as $table)
       }
 
       $dateToString = trim(html_entity_decode($cell4->plaintext));
+      $dateToString = preg_replace("/&#?[a-z0-9]{2,8};/i","",$dateToString);
+      $dateToString = str_replace("&nbsp;", '', $dateToString);
       $dateTo = date('Y-m-d', strtotime($dateToString));
       if($dateTo != '1970-01-01')
       {
