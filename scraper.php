@@ -4,7 +4,7 @@ require 'scraperwiki.php';
 date_default_timezone_set('Australia/Sydney');
 require 'scraperwiki/simple_html_dom.php';
 
-$mainUrl = scraperWiki::scrape("http://www.fairfieldcity.nsw.gov.au/default.asp?iNavCatId=7&iSubCatId=86");
+$mainUrl = scraperWiki::scrape("http://www.fairfieldcity.nsw.gov.au/default.asp?iNavCatID=54&iSubCatID=2240");
 
 $dom = new simple_html_dom();
 $dom->load($mainUrl);
