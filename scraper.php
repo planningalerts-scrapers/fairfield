@@ -36,7 +36,8 @@ foreach($container->find("table") as $table)
             || stristr($cell->innertext, "Council DA No.</span>") > -1
             || stristr($cell->innertext, "File No.</span>") > -1
             || stristr($cell->innertext, "Application No.</span>") > -1
-            || stristr($cell->innertext, "<strong>Application") > -1)
+            || stristr($cell->innertext, "<strong>Application") > -1
+            || stristr($cell->innertext, "<strong>Council Reference") > -1)
         {
             $record['council_reference'] = html_entity_decode($cell->next_sibling()->plaintext);
             $record['council_reference'] = preg_replace('/[ ]/', '', $record['council_reference']);
@@ -49,7 +50,8 @@ foreach($container->find("table") as $table)
             || stristr($cell->innertext, "Property Address:</strong>") > -1
             || stristr($cell->innertext, "Location:</strong>") > -1
             || stristr($cell->innertext, "Property Address:</span>") > -1
-            || stristr($cell->innertext, "Location:</span>") > -1))
+            || stristr($cell->innertext, "Location:</span>") > -1
+            || stristr($cell->innertext, "Premises</strong>") > -1))
         {
             $record['address'] = trim(preg_replace('/[^a-zA-Z0-9 \.,]/', '', html_entity_decode($cell->next_sibling()->plaintext))) . ", NSW";
         }
@@ -66,7 +68,8 @@ foreach($container->find("table") as $table)
             || stristr($cell->innertext, "Details</span>") > -1
             || stristr($cell->innertext, "Project Title:</span>") > -1
             || stristr($cell->innertext, "Development:</span>") > -1
-            || stristr($cell->innertext, "Exhibition:</span>") > -1))
+            || stristr($cell->innertext, "Exhibition:</span>") > -1
+            || stristr($cell->innertext, "Proposal</strong>") > -1))
         {
             $description = trim(html_entity_decode($cell->next_sibling()->plaintext));
             $description = preg_replace('/[^a-zA-Z0-9 \.,]/', '', $description);
