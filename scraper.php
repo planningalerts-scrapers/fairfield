@@ -1,86 +1,154 @@
 <?php
+# Fairfield City Council scraper - ApplicationMaster
 require 'scraperwiki.php'; 
-
+require 'simple_html_dom.php';
 date_default_timezone_set('Australia/Sydney');
-require 'scraperwiki/simple_html_dom.php';
 
-$mainUrl = scraperWiki::scrape("http://www.fairfieldcity.nsw.gov.au/default.asp?iNavCatID=54&iSubCatID=2240");
+## Accept Terms and return Cookies
+function accept_terms_get_cookies($terms_url, $button='Next', $postfields=array()) {
+    $dom = file_get_html($terms_url);
 
-$dom = new simple_html_dom();
-$dom->load($mainUrl);
-$container = $dom->find("#main table #content", 0);
+    foreach ($dom->find('input[type=hidden]') as $data) {
+        $postfields = array_merge($postfields, array($data->name => $data->value));
+    }
+    foreach ($dom->find("input[value=$button]") as $data) {
+        $postfields = array_merge($postfields, array($data->name => $data->value));
+    }
 
-foreach($container->find("table") as $table)
-{
-    $rows = $table->find("tr");
-    print ("Number of records: " . sizeof($rows));
-    for($i = 1; $i < sizeof($rows); $i++)
-    {
-      $row = $table->find("tr", $i);
+    $curl = curl_init($terms_url);
+    curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
+    curl_setopt($curl, CURLOPT_POST, 1);
+    curl_setopt($curl, CURLOPT_POSTFIELDS, $postfields);
+    curl_setopt($curl, CURLOPT_HEADER, TRUE);
+    $terms_response = curl_exec($curl);
+    curl_close($curl);
+    // get cookie
+    // Please imporve it, I am not regex expert, this code changed ASP.NET_SessionId cookie
+    // to ASP_NET_SessionId and Path, HttpOnly are missing etc
+    // Example Source - Cookie: ASP.NET_SessionId=bz3jprrptbflxgzwes3mtse4; path=/; HttpOnly
+    // Stored in array - ASP_NET_SessionId => bz3jprrptbflxgzwes3mtse4
+    preg_match_all('/^Set-Cookie:\s*([^;]*)/mi', $terms_response, $matches);
+    $cookies = array();
+    foreach($matches[1] as $item) {
+        parse_str($item, $cookie);
+        $cookies = array_merge($cookies, $cookie);
+    }
+    return $cookies;
+}
 
-      $record = array();
+### Collect all 'hidden' inputs, plus add the current $eventtarget
+### $eventtarget is coming from the 'pages' section of the HTML
+function buildformdata($dom, $eventtarget, $eventarugment="") {
+    $a = array();
+    foreach ($dom->find("input[type=hidden]") as $input) {
+        if ($input->value === FALSE) {
+            $a = array_merge($a, array($input->name => ""));
+        } else {
+            $a = array_merge($a, array($input->name => $input->value));
+        }
+    }
+    $a = array_merge($a, array('__EVENTTARGET' => $eventtarget));
+    $a = array_merge($a, array('__EVENTARGUMENT' => $eventarugment));
+    
+    return $a;
+}
 
-      $cell0 = $row->find("td", 0);
-      $cell1 = $row->find("td", 1);
-      $cell2 = $row->find("td", 2);
-      $cell3 = $row->find("td", 3);
-      $cell4 = $row->find("td", 4);
 
-      $council_reference = trim(html_entity_decode($cell0->plaintext));
-      $record['council_reference'] = preg_replace('/[ ]/', '', $council_reference);
 
-      $record['address'] = trim(preg_replace('/[^a-zA-Z0-9 \.,]/', '', html_entity_decode($cell1->plaintext))) . ", NSW";
+###
+### Main code start here
+###
+$url_base = "http://openaccess.fairfieldcity.nsw.gov.au/OpenAccess/Modules/Applicationmaster/";
 
-      $description = trim(html_entity_decode($cell2->plaintext));
-      $description = preg_replace('/[^a-zA-Z0-9 \.,]/', '', $description);
-      if(strlen($description) > 228)
-      {
-  	$description = substr($description, 0, 225) . "...";
-      }
-      $record['description'] = $description;
+    # Default to 'thisweek', use MORPH_PERIOD to change to 'thismonth' or 'lastmonth' for data recovery
+    switch(getenv('MORPH_PERIOD')) {
+        case 'thismonth' :
+            $period = 'thismonth';
+            break;
+        case 'lastmonth' :
+            $period = 'lastmonth';
+            break;
+        default         :
+            $period = 'thisweek';
+            break;
+    }
 
-      $dateFromString = trim(html_entity_decode($cell3->plaintext));
-      $dateFromString = preg_replace("/&#?[a-z0-9]{2,8};/i","",$dateFromString);
-      $dateFromString = str_replace("&nbsp;", '', $dateFromString);
-      $dateFrom = date('Y-m-d', strtotime($dateFromString));
-      if($dateFrom != '1970-01-01')
-      {
-  	$record['on_notice_from'] = $dateFrom;
-      }
+$term_url = "http://openaccess.fairfieldcity.nsw.gov.au/OpenAccess/Modules/Applicationmaster/default.aspx";
 
-      $dateToString = trim(html_entity_decode($cell4->plaintext));
-      $dateToString = preg_replace("/&#?[a-z0-9]{2,8};/i","",$dateToString);
-      $dateToString = str_replace("&nbsp;", '', $dateToString);
-      $dateTo = date('Y-m-d', strtotime($dateToString));
-      if($dateTo != '1970-01-01')
-      {
-  	$record['on_notice_to'] = $dateTo;
-      }
+$da_page = $url_base . "default.aspx?page=found&1=" .$period. "&4a=10&6=F";
+$comment_base = "mailto:mail@fairfieldcity.nsw.gov.au?subject=Development Application Enquiry: ";
 
-      $record['info_url'] = 'http://www.fairfieldcity.nsw.gov.au/default.asp?iNavCatID=54&iSubCatID=2240';
-      $record['comment_url'] = 'http://www.fairfieldcity.nsw.gov.au/default.asp?iDocID=6779&iNavCatID=54&iSubCatID=2249';
-      $record['date_scraped'] = date('Y-m-d');
+$cookies = accept_terms_get_cookies($term_url, "Agree");
 
-      if($record['council_reference'] != '' && $record['description'] != '')
-      {
-          $existingRecords = scraperwiki::select("* from data where `council_reference`='" . $record['council_reference'] . "'");
-          if (count($existingRecords) == 0)
-          {
-              print ("Saving record " . $record['council_reference'] . "\n");
-              //print_r ($record);
-              scraperwiki::save(array('council_reference'), $record);
-          }
-          else
-          {
-              print ("Skipping already saved record " . $record['council_reference'] . "\n");
-          }
-      }
-      else
-      {
-          print ("Unable to save the following record:\n");
-          print_r ($record);
-      }
+# Manually set cookie's key and get the value from array
+$request = array(
+    'http'    => array(
+    'header'  => "Cookie: ASP.NET_SessionId=" .$cookies['ASP_NET_SessionId']. "; path=/; HttpOnly\r\n"
+    ));
+$context = stream_context_create($request);
+$dom = file_get_html($da_page, false, $context);
+
+# By default, assume it is single page
+$dataset  = $dom->find("tr[class=rgRow], tr[class=rgAltRow]");
+$NumPages = count($dom->find('div[class=rgWrap rgNumPart] a'));
+if ($NumPages === 0) { $NumPages = 1; }
+
+for ($i = 1; $i <= $NumPages; $i++) {
+    # If more than a single page, fetch the page
+    if ($NumPages > 1) {
+        $eventtarget = substr($dom->find('div[class=rgWrap rgNumPart] a',$i-1)->href, 25, 61);
+        $request = array(
+            'http'    => array(
+            'method'  => "POST",
+            'header'  => "Cookie: ASP.NET_SessionId=" .$cookies['ASP_NET_SessionId']. "; path=/; HttpOnly\r\n" .
+                         "Content-Type: application/x-www-form-urlencoded\r\n",
+            'content' => http_build_query(buildformdata($dom, $eventtarget))));
+        $context = stream_context_create($request);
+        $html = file_get_html($da_page, false, $context);
+        
+        $dataset = $html->find("tr[class=rgRow], tr[class=rgAltRow]");
+        echo "Scraping page $i of $NumPages\r\n";
+    }
+
+    # The usual, look for the data set and if needed, save it
+    foreach ($dataset as $record) {
+        # Slow way to transform the date but it works
+        $date_received = explode('/', trim($record->find('td',2)->plaintext));
+        $date_received = "$date_received[2]-$date_received[1]-$date_received[0]";
+        $date_received = date('Y-m-d', strtotime($date_received));
+
+        # Prep a bit more, ready to add these to the array
+        $tempstr = explode('<br/>', $record->find('td', 3)->innertext);
+        $addr    = $tempstr[0];
+        $desc    = $tempstr[1];
+        $council_reference = preg_replace('/\s+/', ' ', trim($record->find('td',1)->plaintext));
+        $council_reference = explode(' - ', $council_reference);
+        $council_reference = $council_reference[1];
+        
+        # Put all information in an array
+        $application = array (
+            'council_reference' => $council_reference,
+            'address'           => preg_replace('/\s+/', ' ', $addr) . ", NSW, Australia",
+            'description'       => preg_replace('/\s+/', ' ', $desc),
+            'info_url'          => $url_base . trim($record->find('a',0)->href),
+            'comment_url'       => $comment_base . $council_reference,
+            'date_scraped'      => date('Y-m-d'),
+            'date_received'     => $date_received
+        );
+
+        # Check if record exist, if not, INSERT, else do nothing
+        $existingRecords = scraperwiki::select("* from data where `council_reference`='" . $application['council_reference'] . "'");
+        if (count($existingRecords) == 0) {
+            print ("Saving record " . $application['council_reference'] . "\n");
+             print_r ($application);
+            #scraperwiki::save(array('council_reference'), $application);
+        } else {
+            print ("Skipping already saved record " . $application['council_reference'] . "\n");
+        }
     }
 }
+
+
 
 ?>
