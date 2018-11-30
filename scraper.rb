@@ -91,6 +91,9 @@ while next_page_link
 
   current_page_no += 1
   next_page_link = page.at(".rgPageNext")
-  page = click(page, next_page_link)
-  next_page_link = nil if page.nil?
+
+  unless next_page_link.nil?
+    page = click(page, next_page_link)
+    next_page_link = nil if page.nil?
+  end
 end
