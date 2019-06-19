@@ -9,7 +9,7 @@ GIT
 
 GIT
   remote: https://github.com/planningalerts-scrapers/masterview_scraper.git
-  revision: db02f63df77cc9c96233bea66642abe5efa1f534
+  revision: 4fed11e91a77798df2adf292e2cdd15cc294ee7e
   specs:
     masterview_scraper (0.1.0)
       mechanize
@@ -50,7 +50,7 @@ GEM
     ntlm-http (0.1.1)
     public_suffix (3.1.0)
     safe_yaml (1.0.5)
-    sqlite3 (1.3.13)
+    sqlite3 (1.4.1)
     sqlite_magic (0.0.6)
       sqlite3
     timecop (0.9.1)
